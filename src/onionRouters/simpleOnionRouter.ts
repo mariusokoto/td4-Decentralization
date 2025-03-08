@@ -7,8 +7,8 @@ import {
   exportPrvKey,
   rsaDecrypt,
   symDecrypt,
-  exportSymKey,
-  importSymKey
+  importSymKey,
+  importPrvKey,
 } from "../crypto";
 
 export async function simpleOnionRouter(nodeId: number) {
@@ -20,6 +20,9 @@ export async function simpleOnionRouter(nodeId: number) {
   const pubKeyBase64 = await exportPubKey(publicKey);
   const prvKeyBase64 = await exportPrvKey(privateKey);
 
+  if (!prvKeyBase64) {
+    throw new Error("Failed to export private key");
+  }
 
   let lastReceivedEncryptedMessage: string | null = null;
   let lastReceivedDecryptedMessage: string | null = null;
@@ -45,6 +48,41 @@ export async function simpleOnionRouter(nodeId: number) {
     res.status(200).json({ result: prvKeyBase64 });
   });
 
+  onionRouter.post("/message", async (req, res) => {
+    const { message } = req.body;
+    lastReceivedEncryptedMessage = message;
+
+    const encryptedSymmetricKey = message.slice(0, 344);
+    const encryptedMessage = message.slice(344);
+
+    const symmetricKeyBase64 = await rsaDecrypt(encryptedSymmetricKey, await importPrvKey(prvKeyBase64));
+    const symmetricKey = await importSymKey(symmetricKeyBase64);
+
+    const decryptedMessage = await symDecrypt(symmetricKeyBase64, encryptedMessage);
+    lastReceivedDecryptedMessage = decryptedMessage;
+
+    const destination = decryptedMessage.slice(0, 10);
+    const remainingMessage = decryptedMessage.slice(10);
+
+    const nextDestination = parseInt(destination, 10);
+    lastMessageDestination = nextDestination;
+
+    if (nextDestination >= BASE_USER_PORT) {
+      await fetch(`http://localhost:${nextDestination}/message`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: remainingMessage }),
+      });
+    } else {
+      await fetch(`http://localhost:${nextDestination}/message`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: `${destination}${remainingMessage}` }),
+      });
+    }
+
+    res.status(200).send("success");
+  });
 
   const registerNode = async () => {
     try {
@@ -59,15 +97,10 @@ export async function simpleOnionRouter(nodeId: number) {
     }
   };
 
-  // Register the node when it starts up
   await registerNode();
 
   const server = onionRouter.listen(BASE_ONION_ROUTER_PORT + nodeId, () => {
-    console.log(
-        `Onion router ${nodeId} is listening on port ${
-            BASE_ONION_ROUTER_PORT + nodeId
-        }`
-    );
+    console.log(`Onion router ${nodeId} is listening on port ${BASE_ONION_ROUTER_PORT + nodeId}`);
   });
 
   return server;

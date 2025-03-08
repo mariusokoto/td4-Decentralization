@@ -18,7 +18,6 @@ export async function launchRegistry() {
   _registry.use(express.json());
   _registry.use(bodyParser.json());
 
-  // State to store registered nodes
   let nodes: Node[] = [];
 
   // Status route
@@ -26,20 +25,16 @@ export async function launchRegistry() {
     res.status(200).send("live");
   });
 
-  // Register a node
   _registry.post("/registerNode", (req: Request, res: Response) => {
     const { nodeId, pubKey }: RegisterNodeBody = req.body;
     nodes.push({ nodeId, pubKey });
     res.status(200).send("Node registered");
   });
 
-  // Get the list of registered nodes
   _registry.get("/getNodeRegistry", (req: Request, res: Response) => {
     const response: GetNodeRegistryBody = { nodes };
     res.status(200).json(response);
   });
-
-
 
   const server = _registry.listen(REGISTRY_PORT, () => {
     console.log(`registry is listening on port ${REGISTRY_PORT}`);

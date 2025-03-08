@@ -530,7 +530,6 @@ describe("Onion Routing", () => {
     });
 
     it("User 0 can say Hello World! to user 1 - 4 pt", async () => {
-      jest.setTimeout(30000);
       await sendMessage(BASE_USER_PORT + 0, "Hello World!", 1);
 
       const receivedMessage = await getLastReceivedMessage(BASE_USER_PORT + 1);
@@ -543,7 +542,6 @@ describe("Onion Routing", () => {
     });
 
     it("The circuit from 0 to 1 is respected - 1 pt", async () => {
-      jest.setTimeout(30000);
       const callNumbers = new Array(10).fill(0);
 
       // This will be increased when grading exercises
@@ -579,7 +577,6 @@ describe("Onion Routing", () => {
     });
 
     it("Each node in the circuit forwarded the message to the right node - 2pt", async () => {
-      jest.setTimeout(30000);
       await sendMessage(BASE_USER_PORT + 0, "Hello world", 1);
 
       const circuit = await getLastCircuit(BASE_USER_PORT + 0);
@@ -653,7 +650,6 @@ describe("Onion Routing", () => {
     });
 
     it("The right message is passed to each node - 1pt", async () => {
-      jest.setTimeout(30000);
       await sendMessage(
         BASE_USER_PORT + 0,
         "We are finally testing the whole decentralised network !",
